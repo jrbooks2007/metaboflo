@@ -1,4 +1,4 @@
-
+require 'roo'
 class SampleManifest < ActiveRecord::Base
   
   belongs_to :client
