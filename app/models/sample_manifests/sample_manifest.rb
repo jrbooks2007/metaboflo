@@ -26,17 +26,44 @@ class SampleManifest < ActiveRecord::Base
         File.rename(file.path,file_path)      
         workbook = Roo::Excelx.new(file_path);
         workbook.default_sheet = workbook.sheets[2]
-        headers = Hash.new
-        workbook.row(18).each_with_index do|header,i|
-            headers[header] = i
-        end
+        self.title = workbook.cell(6,2)
         (19..workbook.last_row).each do |row|
-          if (!workbook.row(row)[headers['Cell Line Code ']].nil?)
+          if (!workbook.row(row)[2].nil?)
              sample = self.cell_sample_manifests.build
-             sample.tube_id = workbook.row(row)[headers['TUBE_ID']]
-             sample.cell_line = workbook.row(row)[headers['Cell Line Code ']]
-             sample.group_id = workbook.row(row)[headers['Experimental Group # ']]
-             sample.viable_cells = workbook.row(row)[headers['Viable Cell Number']]
+             sample.tube_id = workbook.row(row)[0]
+             sample.cell_line = workbook.row(row)[2]
+             sample.group_id = workbook.row(row)[3]
+             sample.viable_cells = workbook.row(row)[4]
+             (6..10).each do |num|
+               if !workbook.row(row)[num].nil?
+                  set_module sample,num - 5
+                end
+             end   
+           end
+        end
+        workbook.default_sheet = workbook.sheets[0]
+         (19..workbook.last_row).each do |row|
+          if (!workbook.row(row)[3].nil?)
+             sample = self.tissue_sample_manifests.build
+             sample.tube_id = workbook.row(row)[0]
+             sample.species = workbook.row(row)[1]
+             sample.group_id = workbook.row(row)[3]
+             sample.tissue_weight = workbook.row(row)[4]
+             (6..10).each do |num|
+               if !workbook.row(row)[num].nil?
+                  set_module sample,num - 5
+                end
+             end   
+           end
+        end
+         workbook.default_sheet = workbook.sheets[1]
+         (19..workbook.last_row).each do |row|
+          if (!workbook.row(row)[1].nil?)
+             sample = self.biofluid_sample_manifests.build
+             sample.tube_id = workbook.row(row)[0]
+             sample.species = workbook.row(row)[1]
+             sample.group_id = workbook.row(row)[3]
+             sample.sample_volume = workbook.row(row)[4]
              (6..10).each do |num|
                if !workbook.row(row)[num].nil?
                   set_module sample,num - 5
