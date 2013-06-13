@@ -1,4 +1,6 @@
+
 class SampleManifest < ActiveRecord::Base
+  
   belongs_to :client
   has_many :biofluid_sample_manifests, :dependent => :destroy
   has_many :tissue_sample_manifests, :dependent => :destroy
@@ -17,14 +19,34 @@ class SampleManifest < ActiveRecord::Base
   
   
   def parse_file
-    if file.present?
-      CSV.foreach(self.file.path, :col_sep => ",", :headers => true, :header_converters => :symbol, :quote_char => "\"") do |row|
-        
-      end
-      self.file = nil #discard after parseing
-      self.save!
-    end
-    
+    if file.exists?
+        file_name = File.basename( file.path, ".*" )
+        dir = File.dirname(file.path)
+        file_path = dir + "/#{file_name}.xlsx"
+        File.rename(file.path,file_path)      
+        workbook = Roo::Excelx.new(file_path);
+        workbook.default_sheet = workbook.sheets[2]
+        headers = Hash.new
+        workbook.row(18).each_with_index do|header,i|
+            headers[header] = i
+        end
+        (19..workbook.last_row).each do |row|
+          if (!workbook.row(row)[headers['Cell Line Code ']].nil?)
+             sample = self.cell_sample_manifests.build
+             sample.tube_id = workbook.row(row)[headers['TUBE_ID']]
+             sample.cell_line = workbook.row(row)[headers['Cell Line Code ']]
+             sample.group_id = workbook.row(row)[headers['Experimental Group # ']]
+             sample.viable_cells = workbook.row(row)[headers['Viable Cell Number']]
+             (6..10).each do |num|
+               if !workbook.row(row)[num].nil?
+                  set_module sample,num - 5
+                end
+             end   
+           end
+        end
+        self.file = nil #discard after parseing
+        self.save!     
+      end 
   end
   
   
@@ -73,5 +95,20 @@ class SampleManifest < ActiveRecord::Base
     codes << "SS#1" if manifest.ss_1?
     codes << "SS#2" if manifest.ss_2?
     codes
+  end
+  private
+  def set_module(sample,num)
+    case 
+      when num == 1
+        sample.module_1 = true
+      when num == 2
+        sample.module_2 = true
+      when num == 3
+        sample.module_3 = true
+      when num == 4
+        sample.module_4 = true
+      when num == 5
+        sample.module_5 = true
+    end
   end
 end
